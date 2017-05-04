@@ -7,8 +7,41 @@ header-includes:
   - \usepackage{graphicx, url}
 output: pdf_document
 ---
-\section{Methods}
 
+\section{Introduction}
+\paragraph{}
+Statisticians argue that the stock prices are normally distributed in the stock market. Therefore, in financial deratives pricing, Brownian motion with drift are often used. The parameters are the mean and the variance. In the bear market, the mean is higher and the variance is lower. Vice versa.\cite{lee}
+
+```{r echo=FALSE}
+sp <- read.csv("SP.csv")
+sp$Open <- as.numeric(sp$Open)
+sp$Close <- as.numeric(sp$Close)
+sp$return <- (sp$Close-sp$Open)/sp$Open
+sp$diff <- sp$Close-sp$Open
+recession <- sp[1927:3195,]
+bubble <- sp[1628:1927,]
+par(mfrow = c(1,2))
+hist(recession$diff, breaks = 1000, xlim = c(-500,500), 
+     main = "Recession", 
+     xlab = "Close price - Open price",col = "lightblue")
+abline(v = mean(recession$diff), col = "red")
+legend("topright", legend = "mean:-5.17 sd: 424.8",
+       bty = "n", cex = 0.5)
+hist(bubble$diff, breaks = 100, xlim = c(-100,100), 
+     main = "Bubble", 
+     xlab = "Close price - Open price",col = "lightblue")
+abline(v = mean(bubble$diff), col = "red")
+legend("topright", "mean:-3.44 sd: 49.7", bty = "n", cex = 0.5)
+
+
+```
+
+\paragraph{}
+Knowing the current environment of the market gives the better prediction of the stock price. In this project, we would like to construct this market environment and better predict the stock price using this market environment.
+\paragraph{}
+We assume eanch of the stock has Gaussian distribution in a market environment and each market environment is modeled Hidden Markov Model(HMM) to obtain the discrete market regime. In this model, the state of the market regime changes according to a transition matrix.Therefore, we extract the market environment from the stock data.
+
+\section{Methods}
 \paragraph{}
 Here we use a Hidden Markov model to make predictions of stock prices given historical data. Under this model, the unobserved process is a Markov chain whose states represent states of the stock market (Bull market and Bear market). Let $X_i$ denote the unobserved Markov Process with discrete state space. Let $Y_i$ denote the observed, Markov dependent process. Let $Y_i$ be the log of price ratio from open to close of a given stock symbol. Assume a normal distribution of $Y_i$ given $X_i$. Symbolically, $Y_i | X_i \sim N(\mu, \sigma^2)$. The observed process, $Y_i$ depends on the unknown market state, $X_i$.
 
@@ -293,6 +326,7 @@ stock.timeseries.plot <- function(x){
 
 ```
 
+\paragraph{}
 To demonstrate the concept, here we will instantiate a HMM object and train it on a time series of data. Then we will show the estimates for the conditional distribution of $Y_i$ given state of $X_i$. On the density plots, note how the two states different in both mean and variance. One state is associated with high volatililty (high variance in log returns) and one state shows lower volatility (lower variance in log returns).
 
 ```{r}
@@ -303,10 +337,11 @@ ford <- pre.process("./stock_data/ford_decade.csv")
 utx <- pre.process("./stock_data/utx_decade.csv")
 msft <- pre.process("./stock_data/msft_decade.csv")
 sbux <- pre.process("./stock_data/sbux_decade.csv")
+jnj <- pre.process("./stock_data/jnj_decade.csv")
 
 # Examine the data as a plot of price and of log returns
-stocklist <- list(aapl=aapl, goog=goog, ford=ford,
-                  utx=utx, msft=msft, sbux=sbux)
+stocklist <- list(AAPL=aapl, GOOG=goog, FORD=ford,
+                  UTX=utx, MSFT=msft, SBUX=sbux, JNJ=jnj)
 stock.timeseries.plot(stocklist)
 
 # Fit the HMM
@@ -324,8 +359,80 @@ hmm$pm$sd
 plot.conditional.dist(hmm)
 ```
 
+\paragraph{}
+Now we will sequentially predict the next day's returns given a HMM trained on all previous days returns. Then we will define a trading strategy based on the prediction for next day's return. As we will see in the discussion section, the choice of trading strategy (how one takes into account the HMM forecasts) may be just as important as making the forecasts themselves.  Here, the trading strategy simply takes a long position if the next day expected return is positive and takes a short position if the next day expected return is negative. The strategy is rudimentary and does not take into account the fixed cost of transacting shares through a broker. It also does not take into account the variance of the prediciton (predicted volatility) when trading. This is just one strategy that could be used and there are many other possible strategies of trading, given predictions of the mean and variance of the next day's returns.
+
+```{r}
+employ.trading.strategy <- function(x){
+  # Investing rule given the predicted next day returns
+  # param x: data frame containing column 'predicted'
+  # Creates column "position" representing the number
+  #   of shares that a simulated trader would own using
+  #   a this trading strategy
+  N <- nrow(x)
+  x$position <- 0 + (x$predicted > 0) - (x$predicted < 0)
+  return(x)
+}
 
 
+overall.return <- function(x){
+  # Compute the overall return from 
+  #   using the HMM trading strategy
+  # param x: data frame containing 
+  #   columns "open", "close", and "position"
+  N <- nrow(x)
+  start_ <- min(which(!is.na(x$predicted)))
+  D <- 0                  # Initial cash amount
+  holdings <- x$position  # How many shares owned, by day
+  price <- x$open         # Actual open price
+  for(t in start_:N){
+    shares <- holdings[t] - holdings[t - 1]
+    D <- D - shares * price[t]
+  }
+  return(D)
+}
+
+
+sequentially.forecast.hmm <- function(x, days, sym){
+  # Forecast the log returns for day t using information
+  # contained only in days 1 through t - 1 
+  # param x: dataframe with column <column="logdiff">
+  # param sym: string denoting Stock ticker symbol
+  N <- nrow(x)
+  Tr <- N - days  # Truncation point
+  x$predicted <- rep(NA, N)
+  for(t in Tr:(N - 1)){
+    if(t == Tr){
+      hmm <- get.hmm(x, Tr = t)
+    } else {
+      xnew <- x$logdiff[t]
+      hmm <- update.hmm(hmm, xnew)
+    }
+    x$predicted[t + 1] <- forecast.hmm(hmm)
+  }
+  x <- employ.trading.strategy(x)
+  return(x)
+}
+```
+
+```{r}
+aapl <- sequentially.forecast.hmm(aapl, days=332)
+goog <- sequentially.forecast.hmm(goog, days=332)
+ford <- sequentially.forecast.hmm(ford, days=332)
+utx <- sequentially.forecast.hmm(utx, days=332)
+msft <- sequentially.forecast.hmm(msft, days=332)
+sbux <- sequentially.forecast.hmm(sbux, days=332)
+jnj <- sequentially.forecast.hmm(jnj, days=332)
+
+```
+
+```{r}
+
+```
+
+\section{Discussion}
+
+In this forecasting endeavor, we found that it is difficult to make accurate predictions about the next day's returns. On the metric of mean squared error or squared correlation between predictions and actual results, the HMM did not preform exceptionally well. However, given that the purpose of such an algorithm would be to make better trading decisions \emph{on average} than other algorithms, the model should be judged on its simulated returns. One would need knowledge of what other prediction and trading algorithms exist in order to tell if this HMM model better.
 
 
 \begin{thebibliography}{9}
