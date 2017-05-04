@@ -1,5 +1,5 @@
 ---
-title: "Stochastic Processes Project"
+title: "STAT551 Stochastic Processes Project. Forecasting Stock Returns using Hidden Markov Model"
 author: "Daniel Snyder and Yibei Chen"
 date: "5/4/2017"
 header-includes:
@@ -7,10 +7,9 @@ header-includes:
   - \usepackage{graphicx, url}
 output: pdf_document
 ---
-
 \section{Introduction}
 \paragraph{}
-Statisticians argue that the stock prices are normally distributed in the stock market. Therefore, in financial deratives pricing, Brownian motion with drift are often used. The parameters are the mean and the variance. In the bear market, the mean is higher and the variance is lower. Vice versa.\cite{lee}
+In the stock market, some argue that the periodic returns are normally distributed and depend on underlying market parameters. \cite{lee} We may think of these underlying parameter states as Bull or Bear market. In one state the market may have high expected return with low variance. Other times it may have higher variance and negative expected return. Here are two examples of the daily price change of the S&P 500 in two different regimes.
 
 ```{r echo=FALSE}
 sp <- read.csv("SP.csv")
@@ -23,13 +22,13 @@ bubble <- sp[1628:1927,]
 par(mfrow = c(1,2))
 hist(recession$diff, breaks = 1000, xlim = c(-500,500), 
      main = "Recession", 
-     xlab = "Close price - Open price",col = "lightblue")
+     xlab = "Daily Price Change",col = "lightblue")
 abline(v = mean(recession$diff), col = "red")
 legend("topright", legend = "mean:-5.17 sd: 424.8",
        bty = "n", cex = 0.5)
 hist(bubble$diff, breaks = 100, xlim = c(-100,100), 
      main = "Bubble", 
-     xlab = "Close price - Open price",col = "lightblue")
+     xlab = "Daily Price Change",col = "lightblue")
 abline(v = mean(bubble$diff), col = "red")
 legend("topright", "mean:-3.44 sd: 49.7", bty = "n", cex = 0.5)
 
@@ -37,43 +36,37 @@ legend("topright", "mean:-3.44 sd: 49.7", bty = "n", cex = 0.5)
 ```
 
 \paragraph{}
-Knowing the current environment of the market gives the better prediction of the stock price. In this project, we would like to construct this market environment and better predict the stock price using this market environment.
+Knowing the current environment of the market gives the better prediction of the stock price. In this project, we would like to construct a model of this market environment and better predict the stock price using this unknown market environment.
 \paragraph{}
-We assume eanch of the stock has Gaussian distribution in a market environment and each market environment is modeled Hidden Markov Model(HMM) to obtain the discrete market regime. In this model, the state of the market regime changes according to a transition matrix.Therefore, we extract the market environment from the stock data.
-
+We assume each of the stock returns time series has Gaussian distribution of certain parameters given the unknown market environment. The daily returns and the unknown market state can be modeled as Hidden Markov Model. In this model, the state of the market regime changes according to a Markov Chain transition probability. We may estimate the parameters of this model from observed data.
+\section{Data Analysis}
+\paragraph{}
+The stock price data was obtained from NASDAQ historical quote tool \cite{nasdaq}. The stocks were chosen from a wide range of market segments: AAPL (Apple Computer), GOOG (Alphabet), JNJ (Johnson and Johnson), F (Ford), MSFT (Microsoft), SBUX (Starbucks), UTX (United Technologies). The price history was extracted for the past 10 years and is reported on every business day that the stock exchange was open.  The stock history spans the past 10 years, except for the dataset of GOOG stock, which was only available since 2014 after a stock split. See Methods section for time series plots of the stocks chosen.
 \section{Methods}
 \paragraph{}
-Here we use a Hidden Markov model to make predictions of stock prices given historical data. Under this model, the unobserved process is a Markov chain whose states represent states of the stock market (Bull market and Bear market). Let $X_i$ denote the unobserved Markov Process with discrete state space. Let $Y_i$ denote the observed, Markov dependent process. Let $Y_i$ be the log of price ratio from open to close of a given stock symbol. Assume a normal distribution of $Y_i$ given $X_i$. Symbolically, $Y_i | X_i \sim N(\mu, \sigma^2)$. The observed process, $Y_i$ depends on the unknown market state, $X_i$.
-
+Here we use a Hidden Markov model to make predictions of stock prices given historical data. Under this model, the unobserved process is a Markov chain whose states represent states of the stock market (Bull market and Bear market for example). Let $X_i$ denote the unobserved Markov Process with discrete state space. Let $Y_i$ denote the observed, Markov dependent process. Let $Y_i$ be the log of price ratio from open to close of a given stock symbol. Assume a normal distribution of $Y_i$ given $X_i$. Symbolically, $Y_i | X_i \sim N(\mu, \sigma^2)$. The observed process, $Y_i$ depends on the unknown market state, $X_i$.
 \paragraph{Model Parameters}
 Firstly, the initial state of the Markov chain has some inital distribution: $X_0 \sim \pi_0$. This is a distribution of probability to all possible market states at time zero. The number of states of the Markov chain is a parameter that may affect the predictive accuracy of the model.
 \paragraph{}
 The Markov chain has some time-homogeneous transition matrix, $A$, which dictates the probability of transition from one unknown market state to another. The $(i,j)^{th}$ entry is defined to be:
-
 \begin{equation}
 A(i,j)=\mathbb{P}[X_{t+1}=j | X_{t}=i]
 B(i,j)= \mathbb{P}[Y_t = j | X_t = i]
 \end{equation}
-
 \paragraph{}
 Finally, the model has parameters dictating the distribution of the daily price change $Y_i$ conditional upon the unknown market state $X_i$. Since the $Y_i$ are assumed to be Gaussian the parameterization will be mean and standard deviation conditional upon market state.\cite{lee}
-
 \begin{equation}
 \mathbb{P}(Y_t=y_t|X_t=x_t, \theta)\sim N(\mu_X,\sigma_{x_t}^2)
 \end{equation}
-
 where
-
 \begin{equation}
 \theta:=\{\pi_i, A(i,j),\mu_i,\sigma_i\}
 \end{equation}
-
-Now the problem reduces to find the maxima of the posterior likelihood.\cite{lee}
-
+\paragraph{Likelihood Function}
+To estimate the most likely parameters, one must find the maximum of the posterior likelihood of the observed data given the parameters. 
 \begin{equation}
-\max_\theta \mathbb{P}\{Y_0=y_0,\cdots, Y_N=y_N\}
+\max_\theta \mathbb{P}\{Y_0=y_0,\cdots, Y_N=y_N | \theta\}
 \end{equation}
-
 \begin{equation}
 \begin{aligned}
 L_c(\theta)=&\mathbb{P}(Y_0=y_0,\cdots, Y_N=y_N,X_0=y_0,\cdots, X_N=y_N|\theta)\\
@@ -88,24 +81,18 @@ E[\log L_c(\theta)|Y_1,\cdots, Y_N;\tilde \theta]=& \sum_i \mathbb{P}(X-_0=i|Y_0
 (-\frac{1}{2}\log 2\pi \sigma_i^2-\frac{(y_t-\mu_{i})^2}{2\sigma_{i}^2})
 \end{aligned}
 \end{equation}
-
-
+\cite{lee}
 \paragraph{Expectation Maximimization}
 To estimate the maximally likely parameters, we will use the Baum Welch algorithm which is a form of Expectation Maximization \cite{zucchini}.
-
-\paragraph{Baum Welch Algorithm}
-
-Let
-
+\paragraph{}
+Let forward and backward probabilities in the Hidden Markov Model be defined as:
 \begin{equation}
 \begin{aligned}
 \alpha_{t}(j) &= \mathbb{P}(Y_0=y_0,\cdots,Y_t=y_t, X_t=j)\\
 \beta_t(j) &= \mathbb{P}(Y_{t+1}=y_{t+1},\cdots,Y_N=y_N | X_t=j)
 \end{aligned}
 \end{equation}
-
-Their value can be obtained recursively.
-
+Their values may be found recursively:
 \begin{equation}
 \begin{aligned}
 \alpha_{t+1}(j) = &\mathbb{P}(X_{t+1}=j, Y_0=y+0,\cdots,Y_{t+1}=y_{t+1})\\
@@ -120,10 +107,7 @@ Their value can be obtained recursively.
 =& \beta_{t+1}(k)B(k,l)A(j,k)
 \end{aligned}
 \end{equation}
-
-
 where,
-
 \begin{equation}
 \begin{aligned}
 A(i,j) &= \mathbb{P}[X_{t+1} = j | X_t = i]\\
@@ -131,21 +115,17 @@ B(i,j) &= \mathbb{P}[Y_t = j | X_t = i]\\
 \pi_{0}(i) &= \mathbb{P}[X_{0} = i]
 \end{aligned}
 \end{equation}
-
-Then,
-
+\paragraph{}
+The following derivation of the Expectation and Maximization steps for likelihood in HMM are provided for reference and is from \cite{lee}
 \begin{equation}
 \begin{aligned}
 \alpha_t(j) \beta_t(j)=&\mathbb{P} (X_t=j, Y_0=y_0,\dots,Y_N=y_N)
 \end{aligned}
 \end{equation}
-
-So, \cite{lee}
-
+So
 \begin{equation}
 d_t(j) = \mathbb{P}(X_t=j|Y_0=y_0,\cdots, Y_N=y_N) = \frac{\alpha_t(j)\beta_t(j)}{\sum_j\alpha_t(j)\beta_t(j)}
 \end{equation}
-
 \begin{equation}
 \begin{aligned}
 \alpha_t(i)A(i,y_{t+1})B(j,y_{t+1})\beta_{t+1}(j)=&\mathbb{P}(X_t=i, Y_0=y_0,\dots, Y_N=y_N)\\
@@ -154,18 +134,14 @@ d_t(j) = \mathbb{P}(X_t=j|Y_0=y_0,\cdots, Y_N=y_N) = \frac{\alpha_t(j)\beta_t(j)
 = &\mathbb{P}(X_{t+1}=j, X_t=i, Y_0=y_0,\dots, Y_N=y_N)
 \end{aligned}
 \end{equation}
-
-Therefore,\cite{lee}
-
+Therefore,
 \begin{equation}
 \begin{aligned}
 e_t(i,j)=& \mathbb{P}(X_{t+1}=j, X_t=i|Y_0=y_0,\dots, Y_N=y_N)\\
 =& \frac{\alpha_t(i)A(i,y_{t+1})B(j,y_{t+1})\beta_{t+1}(j)}{\sum_{i,j}\alpha_t(i)A(i,y_{t+1})B(j,y_{t+1})\beta_{t+1}(j)}
 \end{aligned}
 \end{equation}
-
-Now we can find the maxima by the steps below.\cite{lee}
-
+Now we can find the maximum by the steps below.
 \begin{equation}
 \begin{aligned}
 &\max_\theta E[\log L_c(\theta)|Y_1,\cdots, Y_N;\tilde \theta]\\
@@ -173,32 +149,25 @@ Now we can find the maxima by the steps below.\cite{lee}
 &s.t.\sum_i\pi_i=1,\sum_j A(i,j)=1
 \end{aligned}
 \end{equation}
-
-We can get,\cite{lee}
-
+The closed form solution for the optimum parameters are:
 \begin{equation}
 \pi_i^{*}=d_0(i), A(i,j)^*=\frac{\sum_{t=0}^{N-1}e_t(i,j,k)}{\sum_j \sum_{t=0}^{N-1}e_t(i,j,k)}, \mu_i^*=\frac{\sum_{t=0}^{N}d_t(i)y_t}{ \sum_{t=0}^{N}d_t(i)}, \sigma_i^*=\frac{\sum_{t=0}^{N}d_t(i)(y_t-\mu^*_{i})^2}{\sum_{t=0}^{N}d_t(i)}
 \end{equation}
+\cite{lee}
 
-\paragraph{}
+\paragraph{Implementation}
 The algorithm is implemented using the HiddenMarkov package for R \cite{harte}.
-
 \paragraph{Prediction of Next Day's Return} Here we will predict the next day's stock return (log price ratio) using the Hidden Markov Model. The EM procedure produced estimates of which state the hidden process is in at the all times considered. We will predict the next day's return as the exepecation of the random variable $Y_{t+1}$. Using the assumed Markov property, we may calculate the marginal distribution of tomorrow's hidden state.
-
 \begin{equation}
 \pi_{t+1} = \pi_t\Pi
 \end{equation}
-
 \paragraph{} Given this distrbution of tomorrow's hidden state, we may calculate the expectation of tomorrow's daily return as the inner product of the hidden state distribution and the vector of Markov dependent means.
-
 \begin{equation}
 \mathbb{E}[Y_{t+1}] = \sum_{i \in S_X} \mathbb{E}[Y_{t+1} | X_{t+1} = i] \cdot \mathbb{P}[X_{t+1} = i]
 \end{equation}
-
 \section{Results}
 \paragraph{}
 The software package chosen to perform the task of predicting stock returns is the R package \emph{HiddenMarkov}. While some texts refer to R package \emph{depmixS4}, this package was chosen because it is newer and because of its syntactic niceness. The package has capbilites for Markov modulated generalized linear models although these capbilities were not tested during the course of this project.
-
 \paragraph{Code}
 The following are pre processing functions used to import stock market historical quote data. This data was retrieved from the historical quote tool available at NASDAQ.com \cite{nasdaq}. The pre processing function here calculates the log price ratio for each day and sorts by date ascending.
 
@@ -326,7 +295,7 @@ stock.timeseries.plot <- function(x){
 
 ```
 
-\paragraph{}
+\paragraph{Demonstration}
 To demonstrate the concept, here we will instantiate a HMM object and train it on a time series of data. Then we will show the estimates for the conditional distribution of $Y_i$ given state of $X_i$. On the density plots, note how the two states different in both mean and variance. One state is associated with high volatililty (high variance in log returns) and one state shows lower volatility (lower variance in log returns).
 
 ```{r}
@@ -359,7 +328,7 @@ hmm$pm$sd
 plot.conditional.dist(hmm)
 ```
 
-\paragraph{}
+\paragraph{Sequential Prediction}
 Now we will sequentially predict the next day's returns given a HMM trained on all previous days returns. Then we will define a trading strategy based on the prediction for next day's return. As we will see in the discussion section, the choice of trading strategy (how one takes into account the HMM forecasts) may be just as important as making the forecasts themselves.  Here, the trading strategy simply takes a long position if the next day expected return is positive and takes a short position if the next day expected return is negative. The strategy is rudimentary and does not take into account the fixed cost of transacting shares through a broker. It also does not take into account the variance of the prediciton (predicted volatility) when trading. This is just one strategy that could be used and there are many other possible strategies of trading, given predictions of the mean and variance of the next day's returns.
 
 ```{r}
@@ -370,7 +339,12 @@ employ.trading.strategy <- function(x){
   #   of shares that a simulated trader would own using
   #   a this trading strategy
   N <- nrow(x)
-  x$position <- 0 + (x$predicted > 0) - (x$predicted < 0)
+  x$position <- rep(0, N)
+  a <- min(which(!is.na(x$predicted)))
+  for(i in a:N){
+    x$position[i] <- 0 + (x$predicted[i] > 0) - (x$predicted[i] < 0)
+  }
+  
   return(x)
 }
 
@@ -424,16 +398,75 @@ msft <- sequentially.forecast.hmm(msft, days=332)
 sbux <- sequentially.forecast.hmm(sbux, days=332)
 jnj <- sequentially.forecast.hmm(jnj, days=332)
 
+forecast.scatter <- function(df, sym=NULL){
+  # Summarize the sequential forecasting
+  #   using a actual by predicted plot
+  # param df: dataframe with columns "logdiff" and "predicted"
+  x <- df$predicted
+  y <- df$logdiff
+  x <- x[!is.na(x)]
+  y <- y[!is.na(x)]
+  axis.min <- min(min(x), min(y))
+  axis.max <- max(max(x), max(y))
+  ax.lim <- c(axis.min, 
+              axis.max)
+  plot(logdiff~predicted, df,
+       xlim=ax.lim, ylim=ax.lim,
+       xlab="Predicted Log Returns",
+       ylab="Actual Log Returns",
+       main=sym)
+  abline(0,1)
+}
+
+
+prediction.cor <- function(x){
+  # Calculate squared correlation between 
+  #   predictions and actual returns
+  y <- x$logdiff
+  z <- x$predicted
+  y <- y[!is.na(z)]
+  z <- z[!is.na(z)]
+  return(cor(y, z))
+}
+
+forecast.scatter(aapl, "AAPL")
+forecast.scatter(goog, "GOOG")
+forecast.scatter(ford, "FORD")
+forecast.scatter(utx, "UTX")
+forecast.scatter(msft, "MSFT")
+forecast.scatter(sbux, "SBUX")
+forecast.scatter(jnj, "JNJ")
+
+prediction.cor(aapl)
+prediction.cor(goog)
+prediction.cor(ford)
+prediction.cor(utx)
+prediction.cor(msft)
+prediction.cor(sbux)
+prediction.cor(jnj)
 ```
 
-```{r}
+\paragraph{Correllation}
+In some cases the correlation between actual and predicted returns is low but positive. In other cases it is negative. The model, with its current structure, does not predict the stock price well.
 
+\paragraph{}
+Another way to assess the value of these predictions would be to simulate the returns from using an investment strategy based on the predictions. Here we will calculate the returns expected from the rudimentary investment strategy defined above. The result of this simulation is a net profit relative to the first day of investing, 332 days ago.
+
+```{r}
+overall.return(aapl)
+overall.return(goog)
+overall.return(ford)
+overall.return(utx)
+overall.return(msft)
+overall.return(sbux)
+overall.return(jnj)
 ```
 
 \section{Discussion}
+In this forecasting endeavor, we found that it is difficult to make accurate predictions about the next day's returns. On the metric of mean squared error or squared correlation between predictions and actual results, the HMM did not preform exceptionally well. However, given that the purpose of such an algorithm would be to make better trading decisions \emph{on average} than other algorithms, the model should be judged on its simulated returns. One would need knowledge of what other prediction and trading algorithms exist in order to tell if this HMM model better. In this project, the predictions and the trading strategy used did not provide a reliable way to always make money on any stock. One stock appears to have positive simulated return and on the rest we would lose money.
 
-In this forecasting endeavor, we found that it is difficult to make accurate predictions about the next day's returns. On the metric of mean squared error or squared correlation between predictions and actual results, the HMM did not preform exceptionally well. However, given that the purpose of such an algorithm would be to make better trading decisions \emph{on average} than other algorithms, the model should be judged on its simulated returns. One would need knowledge of what other prediction and trading algorithms exist in order to tell if this HMM model better.
-
+\paragraph{Future Work}
+The HMM provides prediction of both expectation and variance of future returns. Since one of the conditional distributions of $Y$ has higher variance than the other, the best trading strategy must take into account this uncertainty in the forecasts. Perhaps some quantile of the forecast distribution would be an appropriate statistic on which to base trading decisions.  Future work could also include knowledge of covariates in the market such as trading volume and other factors that may indicate hidden market state.
 
 \begin{thebibliography}{9}
 
@@ -449,5 +482,10 @@ In this forecasting endeavor, we found that it is difficult to make accurate pre
 
 \bibitem{nasdaq}
   NASDAQ historical stock quote tool.\url{http://www.nasdaq.com/quotes/historical_quotes.aspx}
+
+\bibitem{lee}
+  Lee, Joohyung. Shin, Minyong.
+  \emph{Stock Forecasting using Hidden Markov Processes}
+  \url{http://cs229.stanford.edu/proj2009/ShinLee.pdf}.2009
 
 \end{thebibliography}
