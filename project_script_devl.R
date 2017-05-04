@@ -234,6 +234,33 @@ plot.timeseries <- function(x, sym){
 }
 
 
+plot.conditional.dist <- function(hmm){
+  # Plot the conditional distributions
+  #   of Y given hidden state X
+  # param hmm: dthmm {HiddenMarkov} object
+  m1 <- hmm$pm$mean[1]
+  m2 <- hmm$pm$mean[2]
+  s1 <- hmm$pm$sd[1]
+  s2 <- hmm$pm$sd[2]
+  xlim <- c(min(m1 - 3  * s1,
+                m2 - 3  * s2),
+            max(m1 + 3  * s1,
+                m2 + 3  * m2))
+  x <- seq(xlim[1],xlim[2],.001)
+  y1 <- dnorm(x, m1, s1)
+  y2 <- dnorm(x, m2, s2)
+  ymax <- max(max(y1), max(y2))
+  plot(x, y1, type="l", col="red",
+       ylim=c(0,ymax), main="Conditional Distribution: P[Y|X]",
+       ylab="Probability Density", xlab="y")
+  abline(v = m1, col='red')
+  lines(x, y2, col="blue")
+  abline(v = m2, col="blue")
+  legend(xlim[1], ymax / 2, c('X=1', 'X=2'), lty=c(1,1),
+         lwd=c(2,2), col=c('red','blue'))
+}
+
+
 analyze <- function(f.name, sym, method="hmm", days=332){
   # param f.name: name of csv file containing 
   #   stock price data

@@ -8,43 +8,156 @@ header-includes:
 output: pdf_document
 ---
 \section{Methods}
+
 \paragraph{}
-Here we use a Hidden Markov model to make predictions of stock prices given historical data. Under this model, the unobserved process is a Markov chain whose states represent states of the stock market (Bull, Bear, etc...). Let $X_i$ denote the unobserved Markov Process with discrete state space. Let $Y_i$ denote the observed, Markov dependent process. Let $Y_i$ be the log of price ratio from open to close of a given stock symbol. Assume a normal distribution of $Y_i$ given $X_i$. Symbolically, $Y_i | X_i \sim N(\mu, \sigma^2)$. The observed process, $Y_i$ depends on the unknown market state, $X_i$.
+Here we use a Hidden Markov model to make predictions of stock prices given historical data. Under this model, the unobserved process is a Markov chain whose states represent states of the stock market (Bull market and Bear market). Let $X_i$ denote the unobserved Markov Process with discrete state space. Let $Y_i$ denote the observed, Markov dependent process. Let $Y_i$ be the log of price ratio from open to close of a given stock symbol. Assume a normal distribution of $Y_i$ given $X_i$. Symbolically, $Y_i | X_i \sim N(\mu, \sigma^2)$. The observed process, $Y_i$ depends on the unknown market state, $X_i$.
+
 \paragraph{Model Parameters}
 Firstly, the initial state of the Markov chain has some inital distribution: $X_0 \sim \pi_0$. This is a distribution of probability to all possible market states at time zero. The number of states of the Markov chain is a parameter that may affect the predictive accuracy of the model.
 \paragraph{}
 The Markov chain has some time-homogeneous transition matrix, $A$, which dictates the probability of transition from one unknown market state to another. The $(i,j)^{th}$ entry is defined to be:
+
 \begin{equation}
-A=\{a_{i,j}\}=\mathbb{P}[X_{t+1}=j | X_{t}=i]
+A(i,j)=\mathbb{P}[X_{t+1}=j | X_{t}=i]
+B(i,j)= \mathbb{P}[Y_t = j | X_t = i]
 \end{equation}
+
 \paragraph{}
-Finally, the model has parameters dictating the distribution of the daily price change $Y_i$ conditional upon the unknown market state $X_i$. Since the $Y_i$ are assumed to be Gaussian the parameterization will be mean and standard deviation conditional upon market state.
-\paragraph{Expectation Maximimization}
-To estimate the maximally likely parameters, we will use the Baum Welch algorithm which is a form of Expectation Maximization [cite here].
-\paragraph{Baum Welch Algorithm}
-Let
+Finally, the model has parameters dictating the distribution of the daily price change $Y_i$ conditional upon the unknown market state $X_i$. Since the $Y_i$ are assumed to be Gaussian the parameterization will be mean and standard deviation conditional upon market state.\cite{lee}
+
 \begin{equation}
-\alpha_{i}(t) = \mathbb{P}(\vec{Y}=\vec{y}, X_t=x_t | \theta)
+\mathbb{P}(Y_t=y_t|X_t=x_t, \theta)\sim N(\mu_X,\sigma_{x_t}^2)
 \end{equation}
+
 where
+
 \begin{equation}
-\theta = (A, B, \pi)
+\theta:=\{\pi_i, A(i,j),\mu_i,\sigma_i\}
 \end{equation}
-and where,
+
+Now the problem reduces to find the maxima of the posterior likelihood.\cite{lee}
+
 \begin{equation}
-\begin{split}
-A = \{a_{i,j}\} &= \mathbb{P}[X_{t+1} = j | X_t = i]\\
-B = \{b_i()\} &= \mathbb{P}(Y_{t+1} = j | X_t = i)\\
+\max_\theta \mathbb{P}\{Y_0=y_0,\cdots, Y_N=y_N\}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+L_c(\theta)=&\mathbb{P}(Y_0=y_0,\cdots, Y_N=y_N,X_0=y_0,\cdots, X_N=y_N|\theta)\\
+=& \mathbb{P}(X_0=x_0|\theta)\mathbb{P}(Y_0=y_0|X_0=x_0;\theta),\cdots,\\
+&\mathbb{P}(X_N=x_N|X_{N-1}=x_{N-1}\theta)\mathbb{P}(Y_N=y_N|X_{N}=x_{N};\theta)\\
+=& \mathbb{P}(X_0=x_0|\theta)\mathbb{P}(Y_0=y_0|X_0=x_0;\theta)\\
+&\prod_{t=1}^N \mathbb{P}(X_t=x_t|X_{t-1}=x_{t-1}\theta)\mathbb{P}(Y_t=y_t|X_{t}=x_{t};\theta)\\
+\log L_c(\theta)=& \log \pi_{x_0}+\sum_{t+1}^N\log p_{x_tx_{t-1}}+\sum(-\frac{1}{2}\log2\pi\sigma_{x_t}^2-\frac{(y_t-\mu_{x_t})^2}{2\sigma_{x_t}^2})\\
+E[\log L_c(\theta)|Y_1,\cdots, Y_N;\tilde \theta]=& \sum_i \mathbb{P}(X-_0=i|Y_0,\cdots,Y_N;\tilde \theta) \log \pi_i\\
+& + \sum_{i,j}\sum_{t=1}^N \mathbb{P}(X_t=j, X_{t-1=i}|Y_0,\cdots, Y_N;\tilde\theta)\log A(i,j)\\
+& + \sum_{i,j}\sum_{t=0}^N \mathbb{P}(X_t=i|Y_1,\cdots, Y_N;\tilde\theta)
+(-\frac{1}{2}\log 2\pi \sigma_i^2-\frac{(y_t-\mu_{i})^2}{2\sigma_{i}^2})
+\end{aligned}
+\end{equation}
+
+
+\paragraph{Expectation Maximimization}
+To estimate the maximally likely parameters, we will use the Baum Welch algorithm which is a form of Expectation Maximization \cite{zucchini}.
+
+\paragraph{Baum Welch Algorithm}
+
+Let
+
+\begin{equation}
+\begin{aligned}
+\alpha_{t}(j) &= \mathbb{P}(Y_0=y_0,\cdots,Y_t=y_t, X_t=j)\\
+\beta_t(j) &= \mathbb{P}(Y_{t+1}=y_{t+1},\cdots,Y_N=y_N | X_t=j)
+\end{aligned}
+\end{equation}
+
+Their value can be obtained recursively.
+
+\begin{equation}
+\begin{aligned}
+\alpha_{t+1}(j) = &\mathbb{P}(X_{t+1}=j, Y_0=y+0,\cdots,Y_{t+1}=y_{t+1})\\
+= & \sum_i \mathbb{P}(X_{t+1}=j, X_t=i, Y_0=y+0,\cdots,Y_{t+1}=l)\\
+= & \sum_i \mathbb{P}(Y_{t+1}=l)|X_{t+1}=j, X_t=i, Y_0=y+0,\cdots,Y_{t}=y_{t})\\
+& \mathbb{P}(X_{t+1}=j|X_t=i,Y_0=y+0,\cdots,Y_{t}=y_{t})\mathbb{P}(Y_0=y_0,\cdots,Y_t=y_t, X_t=j)\\
+= & \sum_i B(j,l)A(i,j)\alpha_t(i)\\
+\beta_t(j) = & \mathbb{P}(Y_{t+1}=l,\cdots,Y_N=y_N | X_t=j)\\
+= & \sum_k \mathbb{P}(X_{t+1}=k, Y_{t+1}=l,\cdots, Y_N=_N|X_t=j)\\
+= & \sum_k \mathbb{P}(Y_{t+2}=y_{t+2},\cdots,Y_N=y_N | X_{t+1}=k)\\
+& \mathbb{P}(Y_{t+1}=l|X_{t+1}=k)\mathbb{P}(X_{t+1}=k|X_t=j)\\
+=& \beta_{t+1}(k)B(k,l)A(j,k)
+\end{aligned}
+\end{equation}
+
+
+where,
+
+\begin{equation}
+\begin{aligned}
+A(i,j) &= \mathbb{P}[X_{t+1} = j | X_t = i]\\
+B(i,j) &= \mathbb{P}[Y_t = j | X_t = i]\\
 \pi_{0}(i) &= \mathbb{P}[X_{0} = i]
-\end{split}
+\end{aligned}
 \end{equation}
+
+Then,
+
+\begin{equation}
+\begin{aligned}
+\alpha_t(j) \beta_t(j)=&\mathbb{P} (X_t=j, Y_0=y_0,\dots,Y_N=y_N)
+\end{aligned}
+\end{equation}
+
+So, \cite{lee}
+
+\begin{equation}
+d_t(j) = \mathbb{P}(X_t=j|Y_0=y_0,\cdots, Y_N=y_N) = \frac{\alpha_t(j)\beta_t(j)}{\sum_j\alpha_t(j)\beta_t(j)}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+\alpha_t(i)A(i,y_{t+1})B(j,y_{t+1})\beta_{t+1}(j)=&\mathbb{P}(X_t=i, Y_0=y_0,\dots, Y_N=y_N)\\
+&\mathbb{P}(X_{t+1}=j|X_t=i)\mathbb{P}(Y_{t+1}=y_{t+1}|X_{t+1}=j)\\
+&\mathbb{P}(Y_{t+2}=y_{t+2},\cdots, Y_N=y_N|X_{t+1}=j)\\
+= &\mathbb{P}(X_{t+1}=j, X_t=i, Y_0=y_0,\dots, Y_N=y_N)
+\end{aligned}
+\end{equation}
+
+Therefore,\cite{lee}
+
+\begin{equation}
+\begin{aligned}
+e_t(i,j)=& \mathbb{P}(X_{t+1}=j, X_t=i|Y_0=y_0,\dots, Y_N=y_N)\\
+=& \frac{\alpha_t(i)A(i,y_{t+1})B(j,y_{t+1})\beta_{t+1}(j)}{\sum_{i,j}\alpha_t(i)A(i,y_{t+1})B(j,y_{t+1})\beta_{t+1}(j)}
+\end{aligned}
+\end{equation}
+
+Now we can find the maxima by the steps below.\cite{lee}
+
+\begin{equation}
+\begin{aligned}
+&\max_\theta E[\log L_c(\theta)|Y_1,\cdots, Y_N;\tilde \theta]\\
+=& \max_\theta \sum_id_0(i)\log \pi_i+\sum_{i,j,k}\sum_{t=1}^Ne_{t-1}(i,j,k)\log A{i,j}^k+\sum_i\sum_{t=0}^N(d_t(i)-\frac{(y_t-\mu_{i})^2}{2\sigma_{i}^2})\\
+&s.t.\sum_i\pi_i=1,\sum_j A(i,j)=1
+\end{aligned}
+\end{equation}
+
+We can get,\cite{lee}
+
+\begin{equation}
+\pi_i^{*}=d_0(i), A(i,j)^*=\frac{\sum_{t=0}^{N-1}e_t(i,j,k)}{\sum_j \sum_{t=0}^{N-1}e_t(i,j,k)}, \mu_i^*=\frac{\sum_{t=0}^{N}d_t(i)y_t}{ \sum_{t=0}^{N}d_t(i)}, \sigma_i^*=\frac{\sum_{t=0}^{N}d_t(i)(y_t-\mu^*_{i})^2}{\sum_{t=0}^{N}d_t(i)}
+\end{equation}
+
 \paragraph{}
-The algorithm is implemented using the HiddenMarkov package for R [cite here].
+The algorithm is implemented using the HiddenMarkov package for R \cite{harte}.
+
 \paragraph{Prediction of Next Day's Return} Here we will predict the next day's stock return (log price ratio) using the Hidden Markov Model. The EM procedure produced estimates of which state the hidden process is in at the all times considered. We will predict the next day's return as the exepecation of the random variable $Y_{t+1}$. Using the assumed Markov property, we may calculate the marginal distribution of tomorrow's hidden state.
+
 \begin{equation}
 \pi_{t+1} = \pi_t\Pi
 \end{equation}
+
 \paragraph{} Given this distrbution of tomorrow's hidden state, we may calculate the expectation of tomorrow's daily return as the inner product of the hidden state distribution and the vector of Markov dependent means.
+
 \begin{equation}
 \mathbb{E}[Y_{t+1}] = \sum_{i \in S_X} \mathbb{E}[Y_{t+1} | X_{t+1} = i] \cdot \mathbb{P}[X_{t+1} = i]
 \end{equation}
@@ -57,7 +170,6 @@ The software package chosen to perform the task of predicting stock returns is t
 The following are pre processing functions used to import stock market historical quote data. This data was retrieved from the historical quote tool available at NASDAQ.com \cite{nasdaq}. The pre processing function here calculates the log price ratio for each day and sorts by date ascending.
 
 ```{r}
-setwd("~/Documents/STAT551/Project/")
 library(HiddenMarkov)
 library(expm)
 
@@ -90,7 +202,7 @@ To instantiate the dthmm (discrete time hidden markov model) class, provide a ti
 get.hmm <- function(x, Tr=nrow(x), s=2){
   # Instantiate HMM object
   # param x: data frame with column 'logdiff'
-  # param Tr: Truncation point 
+  # param Tr: Truncation point
   #   (index of last observation included in training set)
   # params s: number of hidden Markov States
   Tr <- min(Tr, nrow(x))
@@ -104,16 +216,16 @@ get.hmm <- function(x, Tr=nrow(x), s=2){
   s1 <- sd(v[v < 0]); s2 <- sd(v[v >= 0]);
   means <- c(m1,m2)
   stds <- c(s1,s2)
-  cond.dist <- list(mean = means, 
+  cond.dist <- list(mean = means,
                       sd = stds)
-  hmm <- dthmm(x = v, Pi = A, delta = xi, 
+  hmm <- dthmm(x = v, Pi = A, delta = xi,
              distn = 'norm', pm = cond.dist)
   hmm <- bwelch(hmm)
   return(hmm)
 }
 
 update.hmm <- function(hmm, xnew){
-  # Update the Hidden Markov model with new observation. 
+  # Update the Hidden Markov model with new observation.
   # Re-solve for parameters using Baum-Welch.
   # param hmm: dthmm {HiddenMarkov} object
   # param xnew: float. New observation to append
@@ -139,28 +251,28 @@ forecast.hmm <- function(hmm, horizon=1){
 
 
 plot.conditional.dist <- function(hmm){
-  # Plot the conditional distributions 
+  # Plot the conditional distributions
   #   of Y given hidden state X
   # param hmm: dthmm {HiddenMarkov} object
   m1 <- hmm$pm$mean[1]
   m2 <- hmm$pm$mean[2]
   s1 <- hmm$pm$sd[1]
   s2 <- hmm$pm$sd[2]
-  xlim <- c(min(m1 - 3  * s1, 
+  xlim <- c(min(m1 - 3  * s1,
                 m2 - 3  * s2),
-            max(m1 + 3  * s1, 
+            max(m1 + 3  * s1,
                 m2 + 3  * m2))
   x <- seq(xlim[1],xlim[2],.001)
   y1 <- dnorm(x, m1, s1)
   y2 <- dnorm(x, m2, s2)
   ymax <- max(max(y1), max(y2))
-  plot(x, y1, type="l", col="red", 
-       ylim=c(0,ymax), main="Conditional Distribution: P[Y|X]", 
+  plot(x, y1, type="l", col="red",
+       ylim=c(0,ymax), main="Conditional Distribution: P[Y|X]",
        ylab="Probability Density", xlab="y")
   abline(v = m1, col='red')
   lines(x, y2, col="blue")
   abline(v = m2, col="blue")
-  legend(xlim[1], ymax / 2, c('X=1', 'X=2'), lty=c(1,1), 
+  legend(xlim[1], ymax / 2, c('X=1', 'X=2'), lty=c(1,1),
          lwd=c(2,2), col=c('red','blue'))
 }
 
@@ -173,7 +285,7 @@ stock.timeseries.plot <- function(x){
   sym <- names(x)
   for(name in sym){
     plot(close ~ as.POSIXct(date), x[[name]], type="l",
-         xlab="Date", ylab="Dollars", 
+         xlab="Date", ylab="Dollars",
          main=paste("Log Daily Returns:", name))
   }
 }
@@ -193,7 +305,7 @@ msft <- pre.process("./stock_data/msft_decade.csv")
 sbux <- pre.process("./stock_data/sbux_decade.csv")
 
 # Examine the data as a plot of price and of log returns
-stocklist <- list(aapl=aapl, goog=goog, ford=ford, 
+stocklist <- list(aapl=aapl, goog=goog, ford=ford,
                   utx=utx, msft=msft, sbux=sbux)
 stock.timeseries.plot(stocklist)
 
@@ -232,7 +344,3 @@ plot.conditional.dist(hmm)
   NASDAQ historical stock quote tool.\url{http://www.nasdaq.com/quotes/historical_quotes.aspx}
 
 \end{thebibliography}
-
-
-
-
