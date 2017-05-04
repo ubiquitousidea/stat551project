@@ -82,7 +82,7 @@ E[\log L_c(\theta)|Y_1,\cdots, Y_N;\tilde \theta]=& \sum_i \mathbb{P}(X-_0=i|Y_0
 \end{aligned}
 \end{equation}
 \cite{lee}
-\paragraph{Expectation Maximimization}
+\paragraph{Expectation Maximization}
 To estimate the maximally likely parameters, we will use the Baum Welch algorithm which is a form of Expectation Maximization \cite{zucchini}.
 \paragraph{}
 Let forward and backward probabilities in the Hidden Markov Model be defined as:
@@ -157,17 +157,17 @@ The closed form solution for the optimum parameters are:
 
 \paragraph{Implementation}
 The algorithm is implemented using the HiddenMarkov package for R \cite{harte}.
-\paragraph{Prediction of Next Day's Return} Here we will predict the next day's stock return (log price ratio) using the Hidden Markov Model. The EM procedure produced estimates of which state the hidden process is in at the all times considered. We will predict the next day's return as the exepecation of the random variable $Y_{t+1}$. Using the assumed Markov property, we may calculate the marginal distribution of tomorrow's hidden state.
+\paragraph{Prediction of Next Day's Return} Here we will predict the next day's stock return (log price ratio) using the Hidden Markov Model. The EM procedure produced estimates of which state the hidden process is in at the all times considered. We will predict the next day's return as the expectation of the random variable $Y_{t+1}$. Using the assumed Markov property, we may calculate the marginal distribution of tomorrow's hidden state.
 \begin{equation}
 \pi_{t+1} = \pi_t\Pi
 \end{equation}
-\paragraph{} Given this distrbution of tomorrow's hidden state, we may calculate the expectation of tomorrow's daily return as the inner product of the hidden state distribution and the vector of Markov dependent means.
+\paragraph{} Given this distribution of tomorrow's hidden state, we may calculate the expectation of tomorrow's daily return as the inner product of the hidden state distribution and the vector of Markov dependent means.
 \begin{equation}
 \mathbb{E}[Y_{t+1}] = \sum_{i \in S_X} \mathbb{E}[Y_{t+1} | X_{t+1} = i] \cdot \mathbb{P}[X_{t+1} = i]
 \end{equation}
 \section{Results}
 \paragraph{}
-The software package chosen to perform the task of predicting stock returns is the R package \emph{HiddenMarkov}. While some texts refer to R package \emph{depmixS4}, this package was chosen because it is newer and because of its syntactic niceness. The package has capbilites for Markov modulated generalized linear models although these capbilities were not tested during the course of this project.
+The software package chosen to perform the task of predicting stock returns is the R package \emph{HiddenMarkov}. While some texts refer to R package \emph{depmixS4}, this package was chosen because it is newer and because of its syntactic niceness. The package has capabilities for Markov modulated generalized linear models although these capabilities were not tested during the course of this project.
 \paragraph{Code}
 The following are pre processing functions used to import stock market historical quote data. This data was retrieved from the historical quote tool available at NASDAQ.com \cite{nasdaq}. The pre processing function here calculates the log price ratio for each day and sorts by date ascending.
 
@@ -198,7 +198,7 @@ bwelch <- function(hmm){
 }
 ```
 
-To instantiate the dthmm (discrete time hidden markov model) class, provide a time series of data and starting points for the model parameters.
+To instantiate the dthmm (discrete time hidden Markov model) class, provide a time series of data and starting points for the model parameters.
 
 ```{r}
 get.hmm <- function(x, Tr=nrow(x), s=2){
@@ -296,7 +296,7 @@ stock.timeseries.plot <- function(x){
 ```
 
 \paragraph{Demonstration}
-To demonstrate the concept, here we will instantiate a HMM object and train it on a time series of data. Then we will show the estimates for the conditional distribution of $Y_i$ given state of $X_i$. On the density plots, note how the two states different in both mean and variance. One state is associated with high volatililty (high variance in log returns) and one state shows lower volatility (lower variance in log returns).
+To demonstrate the concept, here we will instantiate a HMM object and train it on a time series of data. Then we will show the estimates for the conditional distribution of $Y_i$ given state of $X_i$. On the density plots, note how the two states different in both mean and variance. One state is associated with high volatility (high variance in log returns) and one state shows lower volatility (lower variance in log returns).
 
 ```{r}
 # Read stock data (date, open, close, volume)
@@ -329,7 +329,7 @@ plot.conditional.dist(hmm)
 ```
 
 \paragraph{Sequential Prediction}
-Now we will sequentially predict the next day's returns given a HMM trained on all previous days returns. Then we will define a trading strategy based on the prediction for next day's return. As we will see in the discussion section, the choice of trading strategy (how one takes into account the HMM forecasts) may be just as important as making the forecasts themselves.  Here, the trading strategy simply takes a long position if the next day expected return is positive and takes a short position if the next day expected return is negative. The strategy is rudimentary and does not take into account the fixed cost of transacting shares through a broker. It also does not take into account the variance of the prediciton (predicted volatility) when trading. This is just one strategy that could be used and there are many other possible strategies of trading, given predictions of the mean and variance of the next day's returns.
+Now we will sequentially predict the next day's returns given a HMM trained on all previous days returns. Then we will define a trading strategy based on the prediction for next day's return. As we will see in the discussion section, the choice of trading strategy (how one takes into account the HMM forecasts) may be just as important as making the forecasts themselves.  Here, the trading strategy simply takes a long position if the next day expected return is positive and takes a short position if the next day expected return is negative. The strategy is rudimentary and does not take into account the fixed cost of transacting shares through a broker. It also does not take into account the variance of the prediction (predicted volatility) when trading. This is just one strategy that could be used and there are many other possible strategies of trading, given predictions of the mean and variance of the next day's returns.
 
 ```{r}
 employ.trading.strategy <- function(x){
@@ -446,7 +446,7 @@ prediction.cor(sbux)
 prediction.cor(jnj)
 ```
 
-\paragraph{Correllation}
+\paragraph{Correlation}
 In some cases the correlation between actual and predicted returns is low but positive. In other cases it is negative. The model, with its current structure, does not predict the stock price well.
 
 \paragraph{}
